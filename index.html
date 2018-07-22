@@ -46,50 +46,31 @@
         <section>
           <h2>Bio</h2>
           <ul>
-            <li>Work in Ocean S.A.
-              (<a href="https://ocean.io/">https://ocean.io/</a>)</li>
             <li>aio-libs, aiohttp etc.</li>
             <li>Python Core Developer</li>
+            <li>asyncio</li>
           </ul>
         </section>
         <!-- ------------------------------------------ -->
 	<section>
 	  <section>
-	    <h1>asyncio</h1>
+	    <h1>async http</h1>
 	    <img src="Iceberg.jpg" width="40%" />
 	  </section>
 	  <section>
 	    <h2>Why?</h2>
-	    <p class="fragment">Microservices</p>
-	    <p class="fragment">Websockets</p>
-	    <p class="fragment">Non-HTTP transports</p>
-	    <p class="fragment">Long-running tasks</p>
-	  </section>
-	  <section>
-	    <h2>Basic API</h2>
-	    <ul>
-	      <li>async/await</li>
-	      <li>create_task()</li>
-	      <li>gather()</li>
-	      <li>locks</li>
-	      <li>queues</li>
-	    </ul>
-	  </section>
-	  <section>
-	    <h2>Third parties</h2>
-	    <pre><code>
-  async def fetch(session, url):
-      async with session.get('http://python.org') as response:
-          return await response.text()
-	    </code></pre>
+	    <p>Microservices</p>
+	    <p>Websockets</p>
+	    <p>Non-HTTP transports</p>
+	    <p>Long-running tasks</p>
 	  </section>
 	  <section>
 	    <h2>asyncio is</h2>
 	    <p>A kind of <b>concurrent</b> programming</p>
 	    <p>asyncio <b>task</b> is a <b>lightweight thread</b></p>
-	    <p class="fragment">Utilize the knowledge of multithreaded approach</p>
-	    <p class="fragment">Use locks, events, queues etc</p>
-	    <p class="fragment"><del><b>No lowlevel API</b></del></p>
+	    <p>Utilize the knowledge of multithreaded approach</p>
+	    <p>Use locks, events, queues etc</p>
+	    <p><del><b>No lowlevel API</b></del></p>
 	  </section>
 	  <section>
 	    <h2>No futures</h2>
@@ -101,16 +82,7 @@
 	    </ul>
 	  </section>
 	  <section>
-	    <h2>Low level API</h2>
-	    <p>Like <b><code>GOTO</code></b> statement</p>
-	    <ul class="fragment">
-	      <li><del>loop.create_future()</del></li>
-	      <li><del>loop.call_later(...)</del></li>
-	      <li><del>loop.call_soon(...)</del></li>
-	    </ul>
-	  </section>
-	  <section>
-	    <h2>asyncio is not</h2>
+	    <h2>aiohttp is not</h2>
 	    <img src="beluga.jpg" width="60%" />
 	    <p>A way to speed up Django app</p>
 	  </section>
@@ -151,7 +123,7 @@ async def process_all():
 	      <li>Amount of spawned task is not controlled</li>
 	      <li>Graceful shutdown is impossible</li>
 	    </ul>
-	    <p class="fragment">aiojobs</p>
+	    <p>aiojobs</p>
 	  </section>
 	</section>
 	<section>
@@ -188,7 +160,7 @@ async def fetch(db):
     ret = []
     async for rec in cursor:
         ret.append(rec)
-    return ret  # What's happened with the cursor?
+    return ret  # What happens with the cursor?
 	    </code></pre>
 	  </section>
 	  <section>
@@ -202,32 +174,10 @@ async def fetch(db):
 	</section>
 	<section>
 	  <section>
-	    <h2>Task Cancellation: Naive approach</h2>
-	    <pre><code>
-async def handler(request):
-    await request.config['db'].execute("UPDATE ...")
-    return web.Response(text="OK")
-	    </code></pre>
-	  </section>
-	  <section>
-	    <h2>Shielded execution</h2>
-	    <pre><code>
-async def handler(request):
-    await asyncio.shield(request.config['db'].execute("UPDATE ..."))
-    return web.Response(text="OK")
-	    </code></pre>
-	    <ul class="fragment">
-	      <li>aiojobs</li>
-	      <li>armor</li>
-	    </ul>
-	  </section>
-	</section>
-	<section>
-	  <section>
 	    <h2>aiohttp client</h2>
 	    <pre><code class="python">
-async with aiohttp.ClientSession() as sess:
-    async with sess.get(url) as resp:
+async with aiohttp.ClientSession() as session:
+    async with session.get(url) as resp:
         body = await resp.text()
 	    </code></pre>
 	  </section>
@@ -238,7 +188,7 @@ timeout = aiohttp.ClientTimeout(
     total=60,
     connect=15)
 
-async with sess.get(url, timeout=timeout)
+async with session.get(url, timeout=timeout)
 	    </code></pre>
 	  </section>
 	  <section>
@@ -280,6 +230,28 @@ finally:
 	</section>
 	<section>
 	  <section>
+	    <h2>Task Cancellation: Naive approach</h2>
+	    <pre><code>
+async def handler(request):
+    await request.config['db'].execute("UPDATE ...")
+    return web.Response(text="OK")
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>Shielded execution</h2>
+	    <pre><code>
+async def handler(request):
+    await asyncio.shield(request.config['db'].execute("UPDATE ..."))
+    return web.Response(text="OK")
+	    </code></pre>
+	    <ul>
+	      <li>aiojobs</li>
+	      <li>armor</li>
+	    </ul>
+	  </section>
+	</section>
+	<section>
+	  <section>
 	    <h1>Global storage</h1>
 	  </section>
 	  <section>
@@ -313,7 +285,69 @@ async def handler(request):
 	  </section>
 	</section>
 	<section>
-	  <h1>stability and performance</h1>
+	  <section>
+	    <h1>Stability, Performance and Future</h1>
+	  </section>
+	  <section>
+	    <h2>Stability</h2>
+	    <ul>
+	      <li>Shrink Public API </li>
+	      <li>Deprecate and protect implementation details</li>
+	      <li>Forbid wild inheritance and attrs modification</li>
+	      <li>Break API again :)</li>
+	    </ul>
+	  </section>
+	  <section>
+	    <h2>Don't inherit from aiohttp classes</h2>
+	    <pre><code class="python">
+class Bad(aiohttp.ClientSession):
+    async def query(self, url):
+        ...
+
+class Good:
+    def __init__(self):
+        self._client = aiohttp.ClientSession()
+
+    async def close(self):
+        await self._client.close()
+
+    async def query(self, url):
+        async with self._client.get(url) as resp:
+            return await self._process(resp)
+ 
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>Don't modify an application</h2>
+	    <pre><code>
+async def bad(request):
+    request.app.my_attr[key] = value
+
+async def good(request):
+    request.config_dict['my_attr'][key] = value
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>Performance: Why?</h2>
+	    <p>Single core</p>
+	    <ul>
+	      <li>aiohttp: 20k RPS</li>
+	      <li>Sanic: 30k RPS</li>
+	      <li>Vibora 70k ???</li>
+	    </ul>
+	    <p>300k RPS on multicore?</p>
+	  </section>
+	  <section>
+	    <h2>Future plans</h2>
+	    <ul>
+	      <li>Boost up aiohttp/yarl/multidict</li>
+	      <li>Drop custom router (no traversal etc)</li>
+	      <li>Support HTTP2</li>
+	      <li>Rewrite client internals</li>
+	      <li>Custom proxies: SOCKS</li>
+	      <li>Pluggable client auth: OAUTH etc.</li>
+	    </ul>
+	  </section>
 	</section>
         <!-- ------------------------------------------ -->
         <section>
