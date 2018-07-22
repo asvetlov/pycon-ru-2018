@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ru" >
+  <head>
+    <title>The current state and future of asyncio</title>
+    <meta name="description" content="">
+    <meta name="author" content="Andrew Svetlov">
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/custom.css" id="theme">
+
+    <!-- Code syntax highlighting -->
+    <link rel="stylesheet" href="lib/css/custom.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+     var link = document.createElement( 'link' );
+     link.rel = 'stylesheet';
+     link.type = 'text/css';
+     link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+     document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+
+    <!--[if lt IE 9]>
+      <script src="lib/js/html5shiv.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <h2>Safe aiohttp</h2>
+          <p>
+            Andrew Svetlov
+            <p>
+              <small>@andrew_svetlov</small><br>
+              <small>andrew.svetlov@gmail.com</small><br>
+              <small>https://asvetlov.github.io/pycon-ru-2018/</small>
+            </p>
+          </p>
+        </section>
+        <section>
+          <h2>Bio</h2>
+          <ul>
+            <li>Work in Ocean S.A.
+              (<a href="https://ocean.io/">https://ocean.io/</a>)</li>
+            <li>aio-libs, aiohttp etc.</li>
+            <li>Python Core Developer</li>
+          </ul>
+        </section>
+        <!-- ------------------------------------------ -->
+	<section>
+	  <section>
+	    <h1>asyncio</h1>
+	    <img src="Iceberg.jpg" width="40%" />
+	  </section>
+	  <section>
+	    <h2>Why?</h2>
+	    <p class="fragment">Microservices</p>
+	    <p class="fragment">Websockets</p>
+	    <p class="fragment">Non-HTTP transports</p>
+	    <p class="fragment">Long-running tasks</p>
+	  </section>
+	  <section>
+	    <h2>Basic API</h2>
+	    <ul>
+	      <li>async/await</li>
+	      <li>create_task()</li>
+	      <li>gather()</li>
+	      <li>locks</li>
+	      <li>queues</li>
+	    </ul>
+	  </section>
+	  <section>
+	    <h2>Third parties</h2>
+	    <pre><code>
+  async def fetch(session, url):
+      async with session.get('http://python.org') as response:
+          return await response.text()
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>asyncio is</h2>
+	    <p>A kind of <b>concurrent</b> programming</p>
+	    <p>asyncio <b>task</b> is a <b>lightweight thread</b></p>
+	    <p class="fragment">Utilize the knowledge of multithreaded approach</p>
+	    <p class="fragment">Use locks, events, queues etc</p>
+	    <p class="fragment"><del><b>No lowlevel API</b></del></p>
+	  </section>
+	  <section>
+	    <h2>No futures</h2>
+	    <ul>
+	      <li>Future is for library writers</li>
+	      <li>Writing error-free code is hard</li>
+	      <li>asyncio had bugs in locks and queues</li>
+	      <li>aiohttp had bugs in connection pools</li>
+	    </ul>
+	  </section>
+	  <section>
+	    <h2>Low level API</h2>
+	    <p>Like <b><code>GOTO</code></b> statement</p>
+	    <ul class="fragment">
+	      <li><del>loop.create_future()</del></li>
+	      <li><del>loop.call_later(...)</del></li>
+	      <li><del>loop.call_soon(...)</del></li>
+	    </ul>
+	  </section>
+	  <section>
+	    <h2>asyncio is not</h2>
+	    <img src="beluga.jpg" width="60%" />
+	    <p>A way to speed up Django app</p>
+	  </section>
+	  <section>
+	    <h2>Don't run asyncio from WSGI app</h2>
+	    <pre><code>
+def view(request):
+    loop = asyncio.get_event_loop()
+    tasks = [asyncio.create_task(fetch(url))
+             for url in urls]
+    loop.run_until_complete(asyncio.wait(tasks))
+	    </code></pre>
+	    <p>Don't mix sync and async code</p>
+	  </section>
+	</section>
+	<section>
+	  <section>
+	    <h1>Common mistakes</h1>
+	    <img src="explosion.png" width="60%" />
+	  </section>
+	</section>
+	<section>
+	  <section>
+	    <h2>Fire-and-forget</h2>
+	    <pre><code>
+async def process(url):
+    ...
+
+async def process_all():
+    for url in urls:
+        asyncio.create_task(process(url))
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>Problems</h2>
+	    <ul>
+	      <li>Errors are not handled</li>
+	      <li>Amount of spawned task is not controlled</li>
+	      <li>Graceful shutdown is impossible</li>
+	    </ul>
+	    <p class="fragment">aiojobs</p>
+	  </section>
+	</section>
+	<section>
+	  <section>
+	    <h2>IO in constructor</h2>
+	    <pre><code>
+class Cls:
+    def __init__(self):
+        self.client = aiohttp.ClientSession()
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>Solution: Factory method</h2>
+	    <pre><code>
+class Cls:
+    def __init__(self):
+        self.client = None
+
+    @classmethod
+    async def create(cls):
+        self = cls()
+        self.client = await aiohttp.ClientSession()
+
+obj = await Cls.create()
+	    </code></pre>
+	  </section>
+	</section>
+	<section>
+	  <section>
+	    <h2>Resource cleanup</h2>
+	    <pre><code>
+async def fetch(db):
+    cursor = await db.execute("SELECT * from tbl")
+    ret = []
+    async for rec in cursor:
+        ret.append(rec)
+    return ret  # What's happened with the cursor?
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>Finalizers</h2>
+	    <ul>
+	      <li><del><code>__del__</code></del></li>
+	      <li><code>await obj.close()</code></li>
+	      <li><code>async with obj: ...</code></li>
+	    </ul>
+	  </section>
+	</section>
+	<section>
+	  <section>
+	    <h2>Task Cancellation: Naive approach</h2>
+	    <pre><code>
+async def handler(request):
+    await request.config['db'].execute("UPDATE ...")
+    return web.Response(text="OK")
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>Shielded execution</h2>
+	    <pre><code>
+async def handler(request):
+    await asyncio.shield(request.config['db'].execute("UPDATE ..."))
+    return web.Response(text="OK")
+	    </code></pre>
+	    <ul class="fragment">
+	      <li>aiojobs</li>
+	      <li>armor</li>
+	    </ul>
+	  </section>
+	</section>
+	<section>
+	  <section>
+	    <h2>aiohttp client</h2>
+	    <pre><code class="python">
+async with aiohttp.ClientSession() as sess:
+    async with sess.get(url) as resp:
+        body = await resp.text()
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>Timeouts</h2>
+	    <pre><code class="python">
+timeout = aiohttp.ClientTimeout(
+    total=60,
+    connect=15)
+
+async with sess.get(url, timeout=timeout)
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>timeouts</h2>
+	    <ul>
+	      <li>total</li>
+	      <li>connect</li>
+	      <li>sock_read</li>
+	      <li>sock_connect</li>
+	    </ul>
+	  </section>
+	</section>
+	<section>
+	  <section>
+	    <h1>WebSockets</h1>
+	  </section>
+	  <section>
+	    <h2>Naive websocket</h2>
+	    <pre><code>
+async def handler(request):
+    resp = web.WebSocketResponse()
+    await resp.prepare(request)
+    await resp.send_str('Welcome!')
+    async for msg in resp:
+        await process(msg.data)
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>Disconnection</h2>
+	    <pre><code>
+try:
+    async for msg in resp:
+        # process msg
+finally:
+    # disconnected
+	    </code></pre>
+	    <p>Ping a peer, dude</p>
+	  </section>
+	</section>
+	<section>
+	  <section>
+	    <h1>Global storage</h1>
+	  </section>
+	  <section>
+	    <h2>Singleton and loop lifecycle</h2>
+	    <pre><code>
+from module import db
+await db.execute(...)
+	    </code></pre>
+	    <p>Problems: testing, configuration etc</p>
+	  </section>
+	  <section>
+	    <h2>app as a storage: init</h2>
+	    <pre><code>
+async def init(app):
+    app['config'] = await load_config()
+    app['db'] = await create_db(app['config'])
+    yield
+    await app['db'].close()
+
+app = web.Application()
+app.cleanup_ctx.append(init)
+	    </code></pre>
+	  </section>
+	  <section>
+	    <h2>Storage usage</h2>
+	    <pre><code>
+async def handler(request):
+    await app.config_dict['db'].execute('SELECT 42')
+    ...
+	    </code></pre>
+	  </section>
+	</section>
+	<section>
+	  <h1>stability and performance</h1>
+	</section>
+        <!-- ------------------------------------------ -->
+        <section>
+          <h2>Questions?</h2>
+          <p>
+            Andrew Svetlov
+	  </p>
+	  <!--   <img src="qr.png"/> -->
+          <p>
+            <small>@andrew_svetlov</small><br>
+            <small>andrew.svetlov@gmail.com</small><br>
+            <small>http://asvetlov.github.io/pycon-ru-2018/</small>
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+     // Full list of configuration options available at:
+     // https://github.com/hakimel/reveal.js#configuration
+     Reveal.initialize({
+       controls: true,
+       progress: true,
+       history: true,
+       center: true,
+       slideNumber: true,
+       transition: 'slide', // none/fade/slide/convex/concave/zoom
+       // Optional reveal.js plugins
+       dependencies: [
+         { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+         { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+         { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+         { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+         { src: 'plugin/zoom-js/zoom.js', async: true },
+         { src: 'plugin/notes/notes.js', async: true }
+       ]
+     });
+    </script>
+
+  </body>
+</html>
