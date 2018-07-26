@@ -180,6 +180,10 @@ async with aiohttp.ClientSession() as session:
     async with session.get(url) as resp:
         body = await resp.text()
 	    </code></pre>
+	    <small>
+	      <p>Hint: reuse client sessions</p>
+	      <p>Hint2: <code>await session.close()</code></p>
+	    </small>
 	  </section>
 	  <section>
 	    <h2>Timeouts</h2>
@@ -188,16 +192,13 @@ timeout = aiohttp.ClientTimeout(
     total=60,
     connect=15)
 
-async with session.get(url, timeout=timeout)
+async with session.get(url, timeout=timeout): ...
 	    </code></pre>
-	  </section>
-	  <section>
-	    <h2>timeouts</h2>
 	    <ul>
-	      <li>total</li>
-	      <li>connect</li>
-	      <li>sock_read</li>
-	      <li>sock_connect</li>
+	      <li>total (5min)</li>
+	      <li>connect (None)</li>
+	      <li>sock_read (None)</li>
+	      <li>sock_connect (None)</li>
 	    </ul>
 	  </section>
 	</section>
